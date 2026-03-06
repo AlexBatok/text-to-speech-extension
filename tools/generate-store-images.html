@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Text to Speech — CWS Store Image Generator</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #111; color: #fff; padding: 32px; }
+    h1 { margin-bottom: 8px; }
+    p { color: #aaa; margin-bottom: 24px; }
+    .section { margin-bottom: 48px; }
+    .section h2 { margin-bottom: 16px; font-size: 18px; color: #8b8fa3; }
+    canvas { display: block; border: 1px solid #333; margin-bottom: 8px; max-width: 100%; }
+    button { padding: 8px 20px; background: #2abfbf; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 8px; margin-bottom: 16px; }
+    button:hover { background: #22a3a3; }
+  </style>
+</head>
+<body>
+  <h1>Text to Speech — CWS Store Images</h1>
+  <p>Click "Download" to save each image as PNG.</p>
+
+  <div class="section">
+    <h2>Screenshot 1 — Hero (1280x800)</h2>
+    <canvas id="ss1" width="1280" height="800"></canvas>
+    <button onclick="download('ss1','screenshot-1-hero.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Screenshot 2 — Features (1280x800)</h2>
+    <canvas id="ss2" width="1280" height="800"></canvas>
+    <button onclick="download('ss2','screenshot-2-features.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Screenshot 3 — Keyboard Shortcuts (1280x800)</h2>
+    <canvas id="ss3" width="1280" height="800"></canvas>
+    <button onclick="download('ss3','screenshot-3-keyboard.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Screenshot 4 — Auto Language (1280x800)</h2>
+    <canvas id="ss4" width="1280" height="800"></canvas>
+    <button onclick="download('ss4','screenshot-4-language.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Screenshot 5 — Privacy (1280x800)</h2>
+    <canvas id="ss5" width="1280" height="800"></canvas>
+    <button onclick="download('ss5','screenshot-5-privacy.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Small Promo Tile (440x280)</h2>
+    <canvas id="tile-small" width="440" height="280"></canvas>
+    <button onclick="download('tile-small','promo-small-440x280.png')">Download</button>
+  </div>
+
+  <div class="section">
+    <h2>Marquee Promo Tile (1400x560)</h2>
+    <canvas id="tile-marquee" width="1400" height="560"></canvas>
+    <button onclick="download('tile-marquee','promo-marquee-1400x560.png')">Download</button>
+  </div>
+
+<script>
+// ── Color palette ──
+const BG_DARK = '#0a1a1a';
+const BG_MID = '#0e2222';
+const BG_CARD = '#122a2a';
+const ACCENT = '#2abfbf';
+const ACCENT_DIM = '#1a8f8f';
+const TEXT = '#e8eaed';
+const MUTED = '#8b9fa0';
+const BORDER = '#1e3d3d';
+
+// ── Helpers ──
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function fillRR(ctx, x, y, w, h, r, fill) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function strokeRR(ctx, x, y, w, h, r, stroke, lw = 1.5) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = lw;
+  ctx.stroke();
+}
+
+function gradBg(ctx, w, h) {
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, BG_DARK);
+  g.addColorStop(0.5, BG_MID);
+  g.addColorStop(1, BG_DARK);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawSpeakerIcon(ctx, x, y, size) {
+  const s = size / 40;
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Speaker body
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath();
+  ctx.rect(4*s, 14*s, 8*s, 12*s);
+  ctx.fill();
+
+  // Cone
+  ctx.beginPath();
+  ctx.moveTo(12*s, 14*s);
+  ctx.lineTo(22*s, 6*s);
+  ctx.lineTo(22*s, 34*s);
+  ctx.lineTo(12*s, 26*s);
+  ctx.closePath();
+  ctx.fill();
+
+  // Waves
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = 2.5 * s;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const r = (8 + i * 6) * s;
+    ctx.beginPath();
+    ctx.arc(22*s, 20*s, r, -0.9, 0.9);
+    ctx.globalAlpha = 1 - i * 0.25;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawKbd(ctx, x, y, text, fontSize = 18) {
+  ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  const tw = ctx.measureText(text).width;
+  const pad = 14;
+  const h = fontSize + 16;
+  fillRR(ctx, x, y, tw + pad * 2, h, 6, '#1a3030');
+  strokeRR(ctx, x, y, tw + pad * 2, h, 6, BORDER, 1.5);
+  ctx.fillStyle = TEXT;
+  ctx.fillText(text, x + pad, y + h - 9);
+  return tw + pad * 2;
+}
+
+function download(id, filename) {
+  const c = document.getElementById(id);
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+// ════════════════════════════════
+// Screenshot 1: Hero
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('ss1');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1280, 800);
+
+  // Dots pattern
+  ctx.fillStyle = 'rgba(42,191,191,0.06)';
+  for (let gx = 0; gx < 1280; gx += 40) {
+    for (let gy = 0; gy < 800; gy += 40) {
+      ctx.beginPath();
+      ctx.arc(gx, gy, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Speaker icon
+  drawSpeakerIcon(ctx, 580, 100, 60);
+
+  // Title
+  ctx.font = '700 56px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Read Any Page Aloud', 640, 250);
+
+  // Subtitle
+  ctx.font = '400 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Lightweight text-to-speech that works offline. No account, no limits.', 640, 295);
+
+  // Popup mockup
+  const px = 440, py = 350, pw = 400, ph = 380;
+  fillRR(ctx, px, py, pw, ph, 16, BG_CARD);
+  strokeRR(ctx, px, py, pw, ph, 16, BORDER);
+
+  // Controls row
+  const btnY = py + 30;
+  const btns = ['⏮', '▶', '⏹', '⏭'];
+  const btnW = 40;
+  const totalBtns = btns.length * btnW + (btns.length - 1) * 12;
+  let bx = px + (pw - totalBtns) / 2;
+
+  btns.forEach((icon, i) => {
+    const isPlay = i === 1;
+    const r = isPlay ? 24 : 20;
+    fillRR(ctx, bx, btnY - (isPlay ? 4 : 0), isPlay ? 48 : btnW, isPlay ? 48 : btnW, r, isPlay ? ACCENT : '#1a3030');
+    ctx.font = `${isPlay ? 20 : 16}px -apple-system`;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(icon, bx + (isPlay ? 24 : 20), btnY + (isPlay ? 22 : 24));
+    bx += (isPlay ? 48 : btnW) + 12;
+  });
+
+  // Voice dropdown
+  ctx.textAlign = 'left';
+  const dy = py + 100;
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Voice', px + 24, dy);
+  fillRR(ctx, px + 24, dy + 8, pw - 48, 32, 6, '#1a3030');
+  strokeRR(ctx, px + 24, dy + 8, pw - 48, 32, 6, BORDER);
+  ctx.font = '400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.fillText('Google UK English Male (en-GB)', px + 34, dy + 29);
+
+  // Speed slider
+  const sy = dy + 60;
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Speed', px + 24, sy);
+  ctx.textAlign = 'right';
+  ctx.fillText('1.0x', px + pw - 24, sy);
+  ctx.textAlign = 'left';
+  fillRR(ctx, px + 24, sy + 8, pw - 48, 4, 2, '#1a3030');
+  fillRR(ctx, px + 24, sy + 8, (pw - 48) * 0.33, 4, 2, ACCENT);
+  ctx.beginPath();
+  ctx.arc(px + 24 + (pw - 48) * 0.33, sy + 10, 8, 0, Math.PI * 2);
+  ctx.fillStyle = ACCENT;
+  ctx.fill();
+
+  // Pitch slider
+  const py2 = sy + 46;
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textAlign = 'left';
+  ctx.fillText('Pitch', px + 24, py2);
+  ctx.textAlign = 'right';
+  ctx.fillText('1.0', px + pw - 24, py2);
+  ctx.textAlign = 'left';
+  fillRR(ctx, px + 24, py2 + 8, pw - 48, 4, 2, '#1a3030');
+  fillRR(ctx, px + 24, py2 + 8, (pw - 48) * 0.5, 4, 2, ACCENT);
+  ctx.beginPath();
+  ctx.arc(px + 24 + (pw - 48) * 0.5, py2 + 10, 8, 0, Math.PI * 2);
+  ctx.fillStyle = ACCENT;
+  ctx.fill();
+
+  // Volume slider
+  const py3 = py2 + 46;
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Volume', px + 24, py3);
+  ctx.textAlign = 'right';
+  ctx.fillText('100%', px + pw - 24, py3);
+  ctx.textAlign = 'left';
+  fillRR(ctx, px + 24, py3 + 8, pw - 48, 4, 2, '#1a3030');
+  fillRR(ctx, px + 24, py3 + 8, (pw - 48) * 0.95, 4, 2, ACCENT);
+  ctx.beginPath();
+  ctx.arc(px + 24 + (pw - 48) * 0.95, py3 + 10, 8, 0, Math.PI * 2);
+  ctx.fillStyle = ACCENT;
+  ctx.fill();
+
+  // Status
+  ctx.textAlign = 'center';
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Reading 3 of 24', px + pw / 2, py + ph - 20);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Screenshot 2: Features
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('ss2');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1280, 800);
+
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Everything You Need', 640, 110);
+  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Powerful features, zero complexity.', 640, 150);
+
+  const features = [
+    ['Full Page Reading', 'One click reads the entire\npage from top to bottom.\nNever stops mid-text.'],
+    ['Selection Reading', 'Select any text, right-click,\n"Read aloud". Reads just\nyour selection.'],
+    ['Floating Player', 'On-page mini-player with\nplay, pause, skip, and\nspeed controls.'],
+    ['Text Highlighting', 'Highlights and scrolls to\nthe current paragraph\nas it reads.'],
+    ['Adjustable Speed', 'From 0.5x to 3x speed.\nAdjust pitch and volume.\nSettings persist.'],
+    ['Dark Mode', 'Popup and widget auto-adapt\nto your system theme.\nLight or dark.'],
+  ];
+
+  const cardW = 340, cardH = 180, gapX = 30, gapY = 24;
+  const totalW = 3 * cardW + 2 * gapX;
+  const ox = (1280 - totalW) / 2;
+  const oy = 200;
+
+  features.forEach(([title, desc], i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const cx = ox + col * (cardW + gapX);
+    const cy = oy + row * (cardH + gapY);
+
+    fillRR(ctx, cx, cy, cardW, cardH, 14, BG_CARD);
+    strokeRR(ctx, cx, cy, cardW, cardH, 14, BORDER);
+
+    // Accent dot
+    ctx.beginPath();
+    ctx.arc(cx + 24, cy + 28, 6, 0, Math.PI * 2);
+    ctx.fillStyle = ACCENT;
+    ctx.fill();
+
+    ctx.font = '650 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.fillText(title, cx + 40, cy + 34);
+
+    ctx.font = '400 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = MUTED;
+    desc.split('\n').forEach((line, li) => {
+      ctx.fillText(line, cx + 24, cy + 65 + li * 22);
+    });
+  });
+
+  // Bottom tagline
+  ctx.textAlign = 'center';
+  ctx.font = '400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = ACCENT_DIM;
+  ctx.fillText('Under 50 KiB total  ·  No account needed  ·  Works offline', 640, 750);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Screenshot 3: Keyboard Shortcuts
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('ss3');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1280, 800);
+
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Hands-Free Control', 640, 130);
+  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Every action has a keyboard shortcut.', 640, 175);
+
+  const shortcuts = [
+    ['Alt', 'P', 'Play / Pause'],
+    ['Alt', 'S', 'Stop reading'],
+    ['Alt', '.', 'Next sentence'],
+    ['Alt', ',', 'Previous sentence'],
+  ];
+
+  const cardW = 550, rowH = 80;
+  const cardH = shortcuts.length * rowH + 40;
+  const cx = (1280 - cardW) / 2;
+  const cy = 230;
+
+  fillRR(ctx, cx, cy, cardW, cardH, 16, BG_CARD);
+  strokeRR(ctx, cx, cy, cardW, cardH, 16, BORDER);
+
+  shortcuts.forEach(([key1, key2, desc], i) => {
+    const ry = cy + 20 + i * rowH + rowH / 2;
+
+    const kx = cx + 40;
+    const w1 = drawKbd(ctx, kx, ry - 17, key1, 20);
+    ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = 'center';
+    ctx.fillText('+', kx + w1 + 12, ry + 4);
+    ctx.textAlign = 'left';
+    drawKbd(ctx, kx + w1 + 24, ry - 17, key2, 20);
+
+    ctx.font = '400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.fillText(desc, cx + 240, ry + 6);
+
+    if (i < shortcuts.length - 1) {
+      ctx.fillStyle = BORDER;
+      ctx.fillRect(cx + 30, ry + rowH / 2, cardW - 60, 1);
+    }
+  });
+
+  // Bottom
+  drawSpeakerIcon(ctx, 590, 620, 50);
+  ctx.font = '600 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Text to Speech', 640, 720);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Screenshot 4: Auto Language
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('ss4');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1280, 800);
+
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Auto Language Detection', 640, 130);
+  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Detects the page language and picks the right voice automatically.', 640, 175);
+
+  const langs = [
+    ['English', 'en', 'Google UK English Male', '"The quick brown fox jumps\nover the lazy dog."'],
+    ['Deutsch', 'de', 'Google Deutsch', '"Der schnelle braune Fuchs\nspringt uber den faulen Hund."'],
+    ['Francais', 'fr', 'Google francais', '"Le rapide renard brun saute\npar-dessus le chien paresseux."'],
+    ['Espanol', 'es', 'Google espanol', '"El rapido zorro marron salta\nsobre el perro perezoso."'],
+    ['Русский', 'ru', 'Google русский', '"Быстрая коричневая лиса\nпрыгает через ленивую собаку."'],
+    ['中文', 'zh', 'Google 普通话', '"快速的棕色狐狸跳过\n了懒惰的狗。"'],
+  ];
+
+  const cardW = 340, cardH = 160, gapX = 30, gapY = 24;
+  const totalW = 3 * cardW + 2 * gapX;
+  const ox = (1280 - totalW) / 2;
+  const oy = 220;
+
+  langs.forEach(([name, code, voice, sample], i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const cx = ox + col * (cardW + gapX);
+    const cy = oy + row * (cardH + gapY);
+
+    fillRR(ctx, cx, cy, cardW, cardH, 14, BG_CARD);
+    strokeRR(ctx, cx, cy, cardW, cardH, 14, BORDER);
+
+    // Language badge
+    fillRR(ctx, cx + 16, cy + 16, 36, 22, 4, ACCENT_DIM);
+    ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(code.toUpperCase(), cx + 34, cy + 31);
+
+    // Language name
+    ctx.textAlign = 'left';
+    ctx.font = '650 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.fillText(name, cx + 62, cy + 33);
+
+    // Voice name
+    ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = ACCENT;
+    ctx.fillText(voice, cx + 16, cy + 60);
+
+    // Sample text
+    ctx.font = '400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = MUTED;
+    sample.split('\n').forEach((line, li) => {
+      ctx.fillText(line, cx + 16, cy + 85 + li * 20);
+    });
+  });
+
+  ctx.textAlign = 'center';
+  ctx.font = '400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = ACCENT_DIM;
+  ctx.fillText('Supports every language your system voices support', 640, 750);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Screenshot 5: Privacy
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('ss5');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1280, 800);
+
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Your Privacy, Respected', 640, 150);
+  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Zero data collection. Everything runs on your device.', 640, 195);
+
+  const items = [
+    'No analytics or tracking',
+    'No cloud services — fully offline',
+    'No account required',
+    'No data sent to any server',
+    'No remote code loaded',
+    'Under 50 KiB — nothing hidden',
+  ];
+
+  const cardW = 500, itemH = 54;
+  const cardH = items.length * itemH + 40;
+  const cx = (1280 - cardW) / 2;
+  const cy = 250;
+
+  fillRR(ctx, cx, cy, cardW, cardH, 16, BG_CARD);
+  strokeRR(ctx, cx, cy, cardW, cardH, 16, BORDER);
+
+  items.forEach((text, i) => {
+    const iy = cy + 20 + i * itemH + itemH / 2;
+
+    // Checkmark circle
+    ctx.beginPath();
+    ctx.arc(cx + 36, iy, 13, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d2d2d';
+    ctx.fill();
+    ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = 'center';
+    ctx.fillText('✓', cx + 36, iy + 6);
+
+    ctx.font = '400 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.fillText(text, cx + 64, iy + 6);
+
+    if (i < items.length - 1) {
+      ctx.fillStyle = BORDER;
+      ctx.fillRect(cx + 20, iy + itemH / 2, cardW - 40, 1);
+    }
+  });
+
+  drawSpeakerIcon(ctx, 590, 640, 50);
+  ctx.font = '600 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Text to Speech', 640, 740);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Small Promo Tile (440x280)
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('tile-small');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 440, 280);
+
+  drawSpeakerIcon(ctx, 185, 30, 40);
+
+  ctx.font = '700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'center';
+  ctx.fillText('Text to Speech', 220, 120);
+
+  ctx.font = '400 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Read any page aloud. Private & offline.', 220, 150);
+
+  // Feature pills
+  const pills = ['Offline', 'Auto Lang', 'Keyboard'];
+  const pillW = 90, pillG = 12;
+  const totalPW = pills.length * pillW + (pills.length - 1) * pillG;
+  let px = (440 - totalPW) / 2;
+
+  pills.forEach(label => {
+    fillRR(ctx, px, 180, pillW, 30, 15, '#1a3030');
+    strokeRR(ctx, px, 180, pillW, 30, 15, BORDER);
+    ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = ACCENT;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, px + pillW / 2, 200);
+    px += pillW + pillG;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Under 50 KiB  ·  No account  ·  No limits', 220, 245);
+  ctx.textAlign = 'left';
+})();
+
+// ════════════════════════════════
+// Marquee Promo Tile (1400x560)
+// ════════════════════════════════
+(function() {
+  const c = document.getElementById('tile-marquee');
+  const ctx = c.getContext('2d');
+  gradBg(ctx, 1400, 560);
+
+  // Dots
+  ctx.fillStyle = 'rgba(42,191,191,0.05)';
+  for (let gx = 0; gx < 1400; gx += 40) {
+    for (let gy = 0; gy < 560; gy += 40) {
+      ctx.beginPath();
+      ctx.arc(gx, gy, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Left side
+  drawSpeakerIcon(ctx, 120, 80, 56);
+
+  ctx.font = '700 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = 'left';
+  ctx.fillText('Listen to Any', 120, 220);
+  ctx.fillText('Webpage.', 120, 282);
+
+  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Natural voices. Works offline.', 120, 340);
+  ctx.fillText('No account, no limits, no data collected.', 120, 368);
+
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(120, 400, 80, 4);
+
+  ctx.font = '500 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Auto language  ·  Keyboard shortcuts  ·  Floating player  ·  Under 50 KiB', 120, 440);
+
+  // Right side: feature cards
+  const features = [
+    ['Full Page', 'Reads everything\ntop to bottom'],
+    ['Selection', 'Right-click to\nread selected text'],
+    ['Auto Voice', 'Detects language,\npicks the right voice'],
+    ['Highlights', 'Scrolls and outlines\ncurrent paragraph'],
+    ['Speed Control', '0.5x to 3x with\npitch & volume'],
+    ['Offline', 'No cloud, no server,\nall local'],
+  ];
+
+  const rx = 750, cw = 160, ch = 110, gx2 = 20, gy2 = 16;
+
+  features.forEach(([title, desc], i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const x = rx + col * (cw + gx2);
+    const y = 90 + row * (ch + gy2);
+
+    fillRR(ctx, x, y, cw, ch, 10, BG_CARD);
+    strokeRR(ctx, x, y, cw, ch, 10, BORDER);
+
+    ctx.font = '650 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.fillText(title, x + 14, y + 26);
+
+    ctx.font = '400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = MUTED;
+    desc.split('\n').forEach((line, li) => {
+      ctx.fillText(line, x + 14, y + 50 + li * 18);
+    });
+  });
+})();
+</script>
+</body>
+</html>
