@@ -116,13 +116,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // Stop playback when tab closes
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = await getState();
   if (state.tabId === tabId) stop();
 });
 
 // Stop playback when tab navigates away
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.url) {
     const state = await getState();
     if (state.tabId === tabId) stop();
