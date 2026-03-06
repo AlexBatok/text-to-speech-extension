@@ -147,8 +147,15 @@ h3 {
   margin-bottom: 16px;
 }
 
-.btc {
-  display: inline-flex;
+.crypto-addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.crypto-row {
+  display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
@@ -157,14 +164,15 @@ h3 {
   border-radius: 8px;
 }
 
-.btc-label {
+.crypto-label {
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--accent);
+  min-width: 32px;
 }
 
-.btc code {
-  font-size: 0.8rem;
+.crypto-row code {
+  font-size: 0.75rem;
   word-break: break-all;
   color: var(--text-muted);
 }

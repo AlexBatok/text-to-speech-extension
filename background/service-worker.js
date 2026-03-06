@@ -4,12 +4,16 @@ import { startPlayback, pause, resume, stop, forward, rewind, getState, getVoice
 try { chrome.tts.stop(); } catch (_) {}
 
 // Context menu setup
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   chrome.contextMenus.create({
     id: 'read-selection',
     title: 'Read aloud',
     contexts: ['selection']
   });
+
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: 'https://alexbatok.github.io/text-to-speech-extension/' });
+  }
 });
 
 // Context menu handler
