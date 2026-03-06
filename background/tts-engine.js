@@ -16,9 +16,15 @@ let playbackState = {
   totalChunks: 0
 };
 
+// H1 fix: guard against race on SW restart
+let restorePromise = null;
+
+async function ensureRestored() {
+  if (restorePromise) await restorePromise;
+}
+
 async function saveState() {
   try {
-    // Only save serializable subset to session storage
     await chrome.storage.session.set({
       playbackState: {
         state: playbackState.state,
@@ -39,8 +45,6 @@ async function restoreState() {
     const data = await chrome.storage.session.get('playbackState');
     if (data.playbackState) {
       Object.assign(playbackState, data.playbackState);
-      // If we were playing when SW died, mark as stopped
-      // (chrome.tts state is lost on SW restart)
       if (playbackState.state === 'PLAYING' || playbackState.state === 'LOADING') {
         playbackState.state = 'PAUSED';
       }
@@ -49,7 +53,10 @@ async function restoreState() {
 }
 
 // Restore on module load (service worker restart)
-restoreState();
+restorePromise = restoreState().finally(() => { restorePromise = null; });
+
+// H3 fix: generation counter to ignore stale TTS events
+let speakGeneration = 0;
 
 async function pickVoiceForLang(lang) {
   const voices = await new Promise(resolve => {
@@ -63,23 +70,17 @@ async function pickVoiceForLang(lang) {
   const pageLang = (lang || 'en').toLowerCase();
   const baseLang = pageLang.split('-')[0];
 
-  // Score voices: higher = better match
   function score(v) {
     const vLang = (v.lang || '').toLowerCase();
     const vBase = vLang.split('-')[0];
     let s = 0;
 
-    // Language match
-    if (vLang === pageLang) s += 100;         // exact: "en-us" = "en-us"
-    else if (vBase === baseLang) s += 50;     // base match: "en" in "en-gb"
+    if (vLang === pageLang) s += 100;
+    else if (vBase === baseLang) s += 50;
 
-    // Prefer Google voices
     if (/^google/i.test(v.voiceName)) s += 20;
-
-    // Prefer non-Microsoft over Microsoft
     if (!/^microsoft/i.test(v.voiceName)) s += 5;
 
-    // For English, prefer UK English Male; for other langs prefer male too
     if (baseLang === 'en' && v.voiceName === 'Google UK English Male') s += 10;
     else if (/male/i.test(v.voiceName) && !/female/i.test(v.voiceName)) s += 3;
 
@@ -88,7 +89,7 @@ async function pickVoiceForLang(lang) {
 
   const candidates = voices
     .map(v => ({ voiceName: v.voiceName, lang: v.lang, score: score(v) }))
-    .filter(v => v.score >= 50) // at least base language match
+    .filter(v => v.score >= 50)
     .sort((a, b) => b.score - a.score);
 
   return candidates.length ? candidates[0].voiceName : null;
@@ -115,7 +116,6 @@ async function speakNextChunk() {
   const settings = await chrome.storage.local.get(['voiceName', 'rate', 'pitch', 'volume']);
   const chunk = playbackState.chunks[playbackState.chunkIndex];
 
-  // Send highlight update
   const blockIdx = playbackState.blockMap[playbackState.chunkIndex];
   if (blockIdx !== playbackState.blockIndex) {
     playbackState.blockIndex = blockIdx;
@@ -130,7 +130,6 @@ async function speakNextChunk() {
     onEvent: handleTtsEvent
   };
 
-  // Voice selection: explicit pick or auto-detect by page language
   const voicePref = settings.voiceName;
   if (voicePref && voicePref !== '__auto__') {
     options.voiceName = voicePref;
@@ -139,15 +138,24 @@ async function speakNextChunk() {
     if (autoVoice) options.voiceName = autoVoice;
   }
 
+  // H3 fix: tag this speak call with current generation
+  const gen = ++speakGeneration;
+
   try {
-    chrome.tts.speak(chunk, options);
+    chrome.tts.speak(chunk, {
+      ...options,
+      onEvent: (event) => {
+        // Ignore stale events from previous speak calls
+        if (gen !== speakGeneration) return;
+        handleTtsEvent(event);
+      }
+    });
     playbackState.state = 'PLAYING';
     await saveState();
   } catch (err) {
     console.error('TTS speak error:', err);
-    // Skip to next chunk on error
     playbackState.chunkIndex++;
-    speakNextChunk();
+    await speakNextChunk();
   }
 }
 
@@ -159,18 +167,16 @@ function handleTtsEvent(event) {
       break;
     case 'error':
       console.warn('TTS error on chunk', playbackState.chunkIndex, ':', event.errorMessage);
-      // Skip to next chunk — never stop mid-text
       playbackState.chunkIndex++;
       speakNextChunk();
       break;
     case 'interrupted':
-      // We initiated the stop/skip, do nothing
       break;
   }
 }
 
 export async function startPlayback(tabId) {
-  // Stop any current playback
+  await ensureRestored();
   stop();
 
   playbackState.state = 'LOADING';
@@ -178,7 +184,6 @@ export async function startPlayback(tabId) {
   await saveState();
 
   try {
-    // Inject content script
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content/extractor.js']
@@ -189,7 +194,6 @@ export async function startPlayback(tabId) {
     return { error: 'Cannot read this page. Text-to-speech is not available on browser internal pages.' };
   }
 
-  // Extract text
   let response;
   try {
     response = await chrome.tabs.sendMessage(tabId, { action: 'extractText' });
@@ -207,7 +211,6 @@ export async function startPlayback(tabId) {
 
   playbackState.lang = response.lang || 'en';
 
-  // Chunk the text, building a block map
   const allChunks = [];
   const blockMap = [];
 
@@ -226,7 +229,6 @@ export async function startPlayback(tabId) {
   playbackState.blockIndex = -1;
   await saveState();
 
-  // Inject widget
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
@@ -254,33 +256,41 @@ export function resume() {
 }
 
 export function stop() {
+  speakGeneration++; // Invalidate any pending TTS events
   try { chrome.tts.stop(); } catch (_) {}
+  notifyTab('clearHighlight');
+  notifyTab('hideWidget');
   playbackState.state = 'STOPPED';
   playbackState.chunks = [];
   playbackState.chunkIndex = 0;
   playbackState.totalChunks = 0;
-  notifyTab('clearHighlight');
-  notifyTab('hideWidget');
-  const oldTabId = playbackState.tabId;
   playbackState.tabId = null;
   saveState();
 }
 
+// H2 fix: forward at last chunk stops playback
 export function forward() {
   if (playbackState.state === 'STOPPED') return;
+  if (playbackState.chunkIndex >= playbackState.chunks.length - 1) {
+    stop();
+    return;
+  }
+  speakGeneration++; // Invalidate stale events
   try { chrome.tts.stop(); } catch (_) {}
-  playbackState.chunkIndex = Math.min(playbackState.chunkIndex + 1, playbackState.chunks.length - 1);
+  playbackState.chunkIndex++;
   speakNextChunk();
 }
 
 export function rewind() {
   if (playbackState.state === 'STOPPED') return;
+  speakGeneration++; // Invalidate stale events
   try { chrome.tts.stop(); } catch (_) {}
   playbackState.chunkIndex = Math.max(playbackState.chunkIndex - 1, 0);
   speakNextChunk();
 }
 
-export function getState() {
+export async function getState() {
+  await ensureRestored();
   return {
     state: playbackState.state,
     chunkIndex: playbackState.chunkIndex,
@@ -302,12 +312,12 @@ export async function getVoices() {
 }
 
 export async function playText(text, tabId) {
+  await ensureRestored();
   stop();
 
   playbackState.state = 'LOADING';
   playbackState.tabId = tabId;
 
-  // Try to detect page language
   let lang = 'en';
   try {
     await chrome.scripting.executeScript({ target: { tabId }, files: ['content/extractor.js'] });

@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-Chrome extension in the text-to-speech niche. Uses the Web Speech API (`speechSynthesis`) for fully offline, privacy-first text reading. Ready for Chrome Web Store publication.
+Chrome extension in the text-to-speech niche. Uses the Chrome TTS API (`chrome.tts`) for fully offline, privacy-first text reading. Ready for Chrome Web Store publication.
 
 ## Tech Stack
 
 - **Language:** Vanilla JavaScript (ES2022+)
 - **Styling:** Vanilla CSS with custom properties, no preprocessors
 - **Manifest:** Chrome Extension Manifest V3
-- **TTS Engine:** Web Speech API (built-in, no external services)
+- **TTS Engine:** Chrome TTS API (`chrome.tts`, built-in, no external services)
 - **Build:** None — plain files, no bundler, no transpiler
 - **Landing/Privacy:** GitHub Pages (static HTML/CSS)
 

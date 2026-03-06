@@ -30,7 +30,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Keyboard shortcuts
 chrome.commands.onCommand.addListener(async (command) => {
   try {
-    const state = getState();
+    const state = await getState();
     switch (command) {
       case 'play-pause':
         if (state.state === 'PLAYING') pause();
@@ -59,7 +59,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     try {
       switch (msg.action) {
         case 'play': {
-          const currentState = getState();
+          const currentState = await getState();
           if (currentState.state === 'PAUSED') {
             resume();
             reply({ success: true });
@@ -95,7 +95,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           reply({ success: true });
           break;
         case 'getState':
-          reply(getState());
+          reply(await getState());
           break;
         case 'getVoices':
           reply(await getVoices());
@@ -117,14 +117,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // Stop playback when tab closes
 chrome.tabs.onRemoved.addListener((tabId) => {
-  const state = getState();
+  const state = await getState();
   if (state.tabId === tabId) stop();
 });
 
 // Stop playback when tab navigates away
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url) {
-    const state = getState();
+    const state = await getState();
     if (state.tabId === tabId) stop();
   }
 });

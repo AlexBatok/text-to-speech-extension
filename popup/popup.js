@@ -103,22 +103,21 @@ function applySettings(settings) {
 
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get current tab ID first
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  currentTabId = tab?.id ?? null;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    currentTabId = tab?.id ?? null;
 
-  const [state, voices, settings] = await Promise.all([
-    sendMessage({ action: 'getState' }),
-    sendMessage({ action: 'getVoices' }),
-    chrome.storage.local.get(['voiceName', 'rate', 'pitch', 'volume'])
-  ]);
+    const [state, voices, settings] = await Promise.all([
+      sendMessage({ action: 'getState' }),
+      sendMessage({ action: 'getVoices' }),
+      chrome.storage.local.get(['voiceName', 'rate', 'pitch', 'volume'])
+    ]);
 
-  updateUI(state);
-  populateVoices(voices, settings.voiceName);
-  applySettings(settings);
-
-  // Set rate link to CWS review page
-  $('#rate-link').href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+    updateUI(state);
+    populateVoices(voices, settings.voiceName);
+    applySettings(settings);
+    $('#rate-link').href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+  } catch (_) {}
 });
 
 // Play/Pause — always works, even for other tab's playback
@@ -192,4 +191,4 @@ setInterval(async () => {
   } catch (_) {
     // Service worker may be inactive
   }
-}, 500);
+}, 1000);

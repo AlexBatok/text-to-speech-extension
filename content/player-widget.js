@@ -25,22 +25,22 @@
         gap: 6px;
         padding: 8px 12px;
         border-radius: 24px;
-        background: #1a1a1a;
-        color: #fff;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        background: #ffffff;
+        color: #1a1a1a;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
         font-size: 13px;
         transition: opacity 0.2s;
       }
 
-      @media (prefers-color-scheme: light) {
+      @media (prefers-color-scheme: dark) {
         .widget {
-          background: #ffffff;
-          color: #1a1a1a;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+          background: #1a1a1a;
+          color: #fff;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.3);
         }
-        .widget button { color: #1a1a1a; }
-        .widget button:hover { background: #f0f0f0; }
-        .speed-label { color: #666; }
+        .widget button { color: #fff; }
+        .widget button:hover { background: rgba(255,255,255,0.15); }
+        .speed-label { color: #999; }
       }
 
       .widget.hidden { display: none; }
@@ -48,7 +48,7 @@
       button {
         background: none;
         border: none;
-        color: #fff;
+        color: #1a1a1a;
         cursor: pointer;
         width: 28px;
         height: 28px;
@@ -61,7 +61,7 @@
         transition: background 0.15s;
       }
 
-      button:hover { background: rgba(255,255,255,0.15); }
+      button:hover { background: #f0f0f0; }
 
       .btn-play-pause {
         width: 32px;
@@ -92,7 +92,7 @@
 
       .speed-label {
         font-size: 11px;
-        color: #999;
+        color: #666;
         min-width: 28px;
         text-align: center;
       }

@@ -1,6 +1,10 @@
 (() => {
   'use strict';
 
+  // H4 fix: prevent double-injection adding duplicate listeners
+  if (window.__ttsExtractorInjected) return;
+  window.__ttsExtractorInjected = true;
+
   const SKIP_TAGS = new Set([
     'script', 'style', 'noscript', 'svg', 'nav', 'aside',
     'select', 'textarea', 'button', 'label', 'audio', 'video',
