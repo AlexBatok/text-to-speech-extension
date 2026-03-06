@@ -1,0 +1,43 @@
+Text to Speech — Read Aloud Any Page turns your browser into a powerful text-to-speech reader. Select text or read entire pages aloud with natural-sounding voices — instantly, privately, and without limits.
+
+HIGHLIGHTS
+
+- Reads full pages or selected text aloud with one click
+- Works offline — uses your browser's built-in voices, no cloud needed
+- Auto-detects page language and picks the matching voice
+- Floating mini-player with playback controls on every page
+- Keyboard shortcuts for hands-free control (Alt+P, Alt+S, Alt+. Alt+,)
+- Highlights the current paragraph as it reads
+- Adjustable speed (0.5x–3x), pitch, and volume
+- Supports all languages your system voices support
+- Dark mode that follows your system theme
+- Lightweight — under 50 KiB total
+
+HOW TO USE
+
+1. Navigate to any webpage
+2. Click the extension icon or press Alt+P
+3. The page starts reading aloud — a floating player appears for quick controls
+4. Adjust speed, pitch, and voice from the popup
+5. Select specific text and right-click "Read aloud" to read just that section
+
+BUILT FOR PRIVACY
+
+This extension does not collect, store, or transmit any data. All text processing happens locally on your device. No account required, no cloud services, no tracking — ever.
+
+CUSTOMIZATION
+
+Choose from all voices installed on your system — Google, Microsoft, and more. Set your preferred speed, pitch, and volume. The extension remembers your settings between sessions.
+
+ACCESSIBILITY
+
+Designed for readers, students, professionals, and anyone who benefits from listening to text. Supports screen readers and follows system color scheme preferences.
+
+KEYBOARD SHORTCUTS
+
+Alt+P — Play / Pause
+Alt+S — Stop
+Alt+. — Next sentence
+Alt+, — Previous sentence
+
+Perfect for articles, documentation, research papers, emails, and any text-heavy webpage.

@@ -1,0 +1,14 @@
+activeTab
+Access the current tab to extract visible text for reading aloud when the user clicks the extension icon.
+
+contextMenus
+Provide a "Read aloud" option in the right-click menu when the user selects text on a page.
+
+storage
+Save user preferences (selected voice, speed, pitch, volume) between browser sessions.
+
+tts
+Convert extracted text to speech using the browser's built-in text-to-speech voices.
+
+scripting
+Inject the content script into the current page to extract readable text and display the floating player widget.
