@@ -36,7 +36,7 @@ Chrome extension in the text-to-speech niche. Uses the Chrome TTS API (`chrome.t
 
 ### CWS Policy
 - No "free", "open source" in any user-facing text
-- No donation/payment links inside extension UI — BTC link on GitHub landing only
+- Donation link in popup OK (small, non-intrusive) — crypto addresses on GitHub landing page
 - Minimum permissions — justify every permission requested
 - Single purpose declaration required
 - All store listing fields SEO and LLMO optimized

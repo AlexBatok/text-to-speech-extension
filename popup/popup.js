@@ -57,7 +57,7 @@ function sortVoices(voices) {
 
 function populateVoices(voices, selectedVoice) {
   const select = $('#voice');
-  select.innerHTML = '';
+  select.replaceChildren();
 
   // Auto option is always first
   const autoOpt = document.createElement('option');

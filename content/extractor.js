@@ -192,23 +192,25 @@
     return true;
   });
 
-  // Highlighting (Task 7.1 — included here to avoid separate injection)
+  // Inject highlight style once
+  const styleEl = document.createElement('style');
+  styleEl.textContent = '.tts-ext-highlight { outline: 2px solid #4a90d9; outline-offset: 2px; }';
+  document.head.appendChild(styleEl);
+
   let currentHighlight = null;
 
   function highlightBlock(index) {
     clearHighlight();
     const el = window.__ttsBlockElements?.[index];
     if (!el) return;
-    el.style.outline = '2px solid #4a90d9';
-    el.style.outlineOffset = '2px';
+    el.classList.add('tts-ext-highlight');
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     currentHighlight = el;
   }
 
   function clearHighlight() {
     if (currentHighlight) {
-      currentHighlight.style.outline = '';
-      currentHighlight.style.outlineOffset = '';
+      currentHighlight.classList.remove('tts-ext-highlight');
       currentHighlight = null;
     }
   }
